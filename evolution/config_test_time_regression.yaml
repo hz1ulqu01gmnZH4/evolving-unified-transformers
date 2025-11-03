@@ -1,0 +1,133 @@
+# OpenEvolve Configuration for Test-Time Regression Framework
+#
+# This config evolves ONLY the attention mechanism within test-time regression notation.
+# All other components (FFN, normalization, residuals) remain FIXED.
+
+# Evolution settings
+max_iterations: 35
+checkpoint_interval: 5
+population_size: 1
+save_all_programs: true
+
+# LLM configuration
+llm:
+  primary_model: "gpt-5"
+  temperature: 0.8
+  max_tokens: 16000
+  fallback_model: "gpt-4"
+
+# Prompt configuration
+prompt:
+  system_message: |
+    You are evolving the ATTENTION MECHANISM within the test-time regression framework.
+
+    **FRAMEWORK: Test-Time Regression (Wang et al., 2025)**
+    View: Sequence models perform associative recall via regression at test time.
+    Formulation:
+      Memorization: store (K, V) pairs
+      Retrieval: y = regression(K, V, query)
+
+    **CURRENT CODE TO EVOLVE:**
+    You will modify the EvolvableTestTimeRegression class in frameworks/test_time_regression.py
+
+    **WHAT YOU CAN EVOLVE:**
+    1. Regression kernel function
+       - Standard: K(q,k) = exp(q·k / τ)
+       - Alternatives: Polynomial, RBF, learned kernels, mixture of kernels
+    2. Temperature/bandwidth parameter
+       - Can be learned, adaptive, position-dependent
+    3. Regularization strategy
+       - Ridge regression, Lasso, elastic net, learned regularization
+    4. Multi-resolution regression
+       - Different kernels at different scales
+       - Hierarchical regression paths
+    5. Value transformation before regression
+       - Learned basis functions, nonlinear transforms
+
+    **WHAT YOU MUST PRESERVE:**
+    1. Function signature: forward(x, mask=None) -> output
+    2. Input/output shapes: [batch, seq_len, hidden_dim]
+    3. Causality: Respect mask (no future K,V pairs)
+    4. Numerical stability: No NaN/Inf
+    5. Interpretability as regression (retrieve based on memorized K,V)
+
+    **WHAT YOU CANNOT MODIFY:**
+    - ANYTHING outside EVOLVE-BLOCK markers
+    - FFN, normalization, block structure, residuals
+
+    **CRITICAL CONSTRAINTS:**
+    - Only modify code within EVOLVE-BLOCK-START and EVOLVE-BLOCK-END markers
+    - Class name must stay EvolvableTestTimeRegression
+    - Must maintain multi-head structure
+    - Must be expressible as regression framework (query → retrieve from stored K,V)
+
+    **EVOLUTION GOAL:**
+    Discover novel regression kernels/methods that achieve better scaling laws than softmax kernel.
+
+    **EXAMPLES OF GOOD MUTATIONS:**
+    - Try polynomial kernel: K(q,k) = (q·k + c)^d
+    - Add adaptive bandwidth per head
+    - Introduce ridge regularization in regression
+    - Use mixture of kernels with learned weights
+    - Add learned basis transformation for values
+
+    **EXAMPLES OF BAD MUTATIONS:**
+    - Changing FFN or normalization
+    - Breaking causality
+    - Producing NaN/Inf
+    - Moving outside framework notation
+
+  user_message_template: |
+    Current iteration: {iteration}
+    Previous fitness: {previous_fitness}
+    Best fitness so far: {best_fitness}
+
+    Current code:
+    ```python
+    {current_code}
+    ```
+
+    Propose an improvement to the regression mechanism that:
+    1. Stays within test-time regression framework
+    2. Maintains all constraints
+    3. Only modifies EVOLVE-BLOCK code
+    4. Could improve scaling law slope
+
+    Return ONLY the modified code within the EVOLVE-BLOCK.
+
+# Evaluator configuration
+evaluator:
+  module: "evolution.evaluator"
+  class: "ScalingLawEvaluator"
+  init_args:
+    framework: "test_time_regression"
+    training_steps: 100000
+    eval_frequency: 5000
+    batch_size: 64
+    learning_rate: 0.001
+    warmup_steps: 1000
+    device: "cuda"
+  method: "evaluate_program"
+  timeout: 7200
+
+# Code validation
+validation:
+  check_syntax: true
+  check_imports: true
+  check_shapes: true
+  test_forward_pass: true
+  test_gradient_flow: true
+
+# File paths
+paths:
+  code_file: "frameworks/test_time_regression.py"
+  evolve_block_start: "# EVOLVE-BLOCK-START: TestTimeRegression"
+  evolve_block_end: "# EVOLVE-BLOCK-END: TestTimeRegression"
+  output_dir: "experiments/02_evolve_test_time_regression"
+
+# Logging
+logging:
+  level: "INFO"
+  log_file: "evolution_test_time_regression.log"
+  save_code_history: true
+  save_fitness_history: true

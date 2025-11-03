@@ -1,0 +1,134 @@
+# OpenEvolve Configuration for Matrix Mixer Framework
+#
+# This config evolves ONLY the attention mechanism within matrix mixer notation.
+# All other components (FFN, normalization, residuals) remain FIXED.
+
+# Evolution settings
+max_iterations: 35
+checkpoint_interval: 5
+population_size: 1
+save_all_programs: true
+
+# LLM configuration
+llm:
+  primary_model: "gpt-5"
+  temperature: 0.8
+  max_tokens: 16000
+  fallback_model: "gpt-4"
+
+# Prompt configuration
+prompt:
+  system_message: |
+    You are evolving the ATTENTION MECHANISM within the matrix mixer framework.
+
+    **FRAMEWORK: Matrix Mixer (Hwang et al., 2024 - Hydra)**
+    View: Sequence mixing as structured matrix operations.
+    Formulation: output = M · X  where M has specific structure
+
+    **CURRENT CODE TO EVOLVE:**
+    You will modify the EvolvableMatrixMixer class in frameworks/matrix_mixer.py
+
+    **WHAT YOU CAN EVOLVE:**
+    1. Matrix structure
+       - Dense, low-rank, sparse, block-diagonal, Toeplitz, circulant
+       - Learned sparsity patterns
+       - Hierarchical structure (coarse-to-fine)
+    2. Matrix parameterization
+       - How M is computed from input
+       - Learned vs data-dependent components
+       - Factorizations (M = ABC, SVD-like, etc.)
+    3. Rank allocation
+       - Adaptive rank per head or position
+       - Learnable rank scheduling
+    4. Mixing strategies
+       - Sequential mixing (M1 @ M2 @ ... @ X)
+       - Parallel mixing paths
+       - Residual mixing (X + M @ X)
+
+    **WHAT YOU MUST PRESERVE:**
+    1. Function signature: forward(x, mask=None) -> output
+    2. Input/output shapes: [batch, seq_len, hidden_dim]
+    3. Causality: If mask provided, M must be lower-triangular (or respect mask)
+    4. Numerical stability: No NaN/Inf
+    5. Expressibility as matrix operation: output = f(M, X)
+
+    **WHAT YOU CANNOT MODIFY:**
+    - ANYTHING outside EVOLVE-BLOCK markers
+    - FFN, normalization, block structure, residuals
+
+    **CRITICAL CONSTRAINTS:**
+    - Only modify code within EVOLVE-BLOCK-START and EVOLVE-BLOCK-END markers
+    - Class name must stay EvolvableMatrixMixer
+    - Must be expressible as structured matrix operations
+    - Mixing matrix M can depend on data (like attention) or be learned (like MLP-Mixer)
+
+    **EVOLUTION GOAL:**
+    Discover novel mixing matrix structures that achieve better scaling laws than dense softmax.
+
+    **EXAMPLES OF GOOD MUTATIONS:**
+    - Use low-rank factorization: M = UV^T with learned rank
+    - Add block-diagonal structure for local/global mixing
+    - Introduce learnable sparsity pattern
+    - Use Toeplitz or circulant structure for parameter sharing
+    - Add hierarchical mixing at multiple scales
+
+    **EXAMPLES OF BAD MUTATIONS:**
+    - Changing FFN or normalization
+    - Breaking causality (upper-triangular matrix)
+    - Producing NaN/Inf
+    - Moving outside matrix mixer notation
+
+  user_message_template: |
+    Current iteration: {iteration}
+    Previous fitness: {previous_fitness}
+    Best fitness so far: {best_fitness}
+
+    Current code:
+    ```python
+    {current_code}
+    ```
+
+    Propose an improvement to the matrix mixing mechanism that:
+    1. Stays within matrix mixer framework
+    2. Maintains all constraints
+    3. Only modifies EVOLVE-BLOCK code
+    4. Could improve scaling law slope
+
+    Return ONLY the modified code within the EVOLVE-BLOCK.
+
+# Evaluator configuration
+evaluator:
+  module: "evolution.evaluator"
+  class: "ScalingLawEvaluator"
+  init_args:
+    framework: "matrix_mixer"
+    training_steps: 100000
+    eval_frequency: 5000
+    batch_size: 64
+    learning_rate: 0.001
+    warmup_steps: 1000
+    device: "cuda"
+  method: "evaluate_program"
+  timeout: 7200
+
+# Code validation
+validation:
+  check_syntax: true
+  check_imports: true
+  check_shapes: true
+  test_forward_pass: true
+  test_gradient_flow: true
+
+# File paths
+paths:
+  code_file: "frameworks/matrix_mixer.py"
+  evolve_block_start: "# EVOLVE-BLOCK-START: MatrixMixer"
+  evolve_block_end: "# EVOLVE-BLOCK-END: MatrixMixer"
+  output_dir: "experiments/03_evolve_matrix_mixer"
+
+# Logging
+logging:
+  level: "INFO"
+  log_file: "evolution_matrix_mixer.log"
+  save_code_history: true
+  save_fitness_history: true

@@ -1,0 +1,137 @@
+# OpenEvolve Configuration for Coefficient Dynamics Framework
+#
+# This config evolves ONLY the attention mechanism within coefficient dynamics notation.
+# All other components (FFN, normalization, residuals) remain FIXED.
+
+# Evolution settings
+max_iterations: 35
+checkpoint_interval: 5
+population_size: 1  # Single best individual (no population)
+save_all_programs: true
+
+# LLM configuration
+llm:
+  primary_model: "gpt-5"  # Or "gpt-4" if gpt-5 not available
+  temperature: 0.8
+  max_tokens: 16000
+  fallback_model: "gpt-4"
+
+# Prompt configuration
+prompt:
+  system_message: |
+    You are evolving the ATTENTION MECHANISM within the coefficient dynamics framework.
+
+    **FRAMEWORK: Coefficient Dynamics (Sieber et al., 2025)**
+    View: All sequence models compute outputs as linear combinations where coefficients evolve via dynamics.
+    Formulation: output_t = Σ α_t,i · V_i  where α evolves via autonomous linear dynamics
+
+    **CURRENT CODE TO EVOLVE:**
+    You will modify the EvolvableCoefficientDynamics class in frameworks/coefficient_dynamics.py
+
+    **WHAT YOU CAN EVOLVE:**
+    1. How attention coefficients α are computed from Q, K, V
+       - Example: Use different kernels, learned temperature, adaptive scaling
+    2. How coefficients evolve across sequence positions
+       - Example: Add recurrence, momentum, learned dynamics
+    3. Mixing functions and aggregation strategies
+       - Example: Different ways to combine α with V
+    4. Learned parameters within attention
+       - Example: Position-dependent biases, learnable gates, adaptive temperatures
+
+    **WHAT YOU MUST PRESERVE:**
+    1. Function signature: forward(x, mask=None) -> output
+    2. Input shape: [batch, seq_len, hidden_dim]
+    3. Output shape: [batch, seq_len, hidden_dim]
+    4. Causality: If mask is provided, MUST respect it (no future information)
+    5. Numerical stability: No NaN, no Inf
+    6. Framework notation: Must be expressible as output = Σ α · V
+
+    **WHAT YOU CANNOT MODIFY:**
+    - ANYTHING outside EVOLVE-BLOCK markers
+    - FFN class (StandardFFN must stay as-is)
+    - Normalization (LayerNorm must stay as-is)
+    - Block structure (FixedTransformerBlock must stay sequential)
+    - Residual connections (standard addition must stay as-is)
+
+    **CRITICAL CONSTRAINTS:**
+    - Only modify code within EVOLVE-BLOCK-START and EVOLVE-BLOCK-END markers
+    - Do NOT modify imports outside the block
+    - Do NOT change class name (must stay EvolvableCoefficientDynamics)
+    - Do NOT modify __init__ signature
+    - Do NOT modify forward signature
+    - MUST maintain multi-head structure (though can modify how heads interact)
+
+    **EVOLUTION GOAL:**
+    Discover novel coefficient dynamics that achieve better scaling laws than standard softmax.
+    Fitness = -slope where loss = intercept + slope × log(params)
+    Better scaling (more negative slope) = higher fitness
+
+    **EXAMPLES OF GOOD MUTATIONS:**
+    - Add learned temperature per head
+    - Introduce momentum in coefficient updates
+    - Use different kernels (polynomial, RBF, learned)
+    - Add position-aware coefficient adjustments
+    - Introduce adaptive scaling based on sequence statistics
+
+    **EXAMPLES OF BAD MUTATIONS:**
+    - Changing FFN activation to SwiGLU
+    - Replacing LayerNorm with RMSNorm
+    - Adding parallel branches
+    - Breaking causality (using future information)
+    - Producing NaN or Inf values
+
+  user_message_template: |
+    Current iteration: {iteration}
+    Previous fitness: {previous_fitness}
+    Best fitness so far: {best_fitness}
+
+    Current code:
+    ```python
+    {current_code}
+    ```
+
+    Propose an improvement to the attention mechanism that:
+    1. Stays within coefficient dynamics framework notation
+    2. Maintains all constraints (causality, shapes, stability)
+    3. Only modifies code within EVOLVE-BLOCK markers
+    4. Could improve scaling law slope (better generalization across model sizes)
+
+    Return ONLY the modified code within the EVOLVE-BLOCK, nothing else.
+
+# Evaluator configuration
+evaluator:
+  module: "evolution.evaluator"
+  class: "ScalingLawEvaluator"
+  init_args:
+    framework: "coefficient_dynamics"
+    training_steps: 100000  # CRITICAL: Full convergence, not 2k proxy!
+    eval_frequency: 5000
+    batch_size: 64
+    learning_rate: 0.001
+    warmup_steps: 1000
+    device: "cuda"
+
+  method: "evaluate_program"
+  timeout: 7200  # 2 hours per evaluation (4 models × 100k steps each)
+
+# Code validation
+validation:
+  check_syntax: true
+  check_imports: true
+  check_shapes: true
+  test_forward_pass: true
+  test_gradient_flow: true
+
+# File paths
+paths:
+  code_file: "frameworks/coefficient_dynamics.py"
+  evolve_block_start: "# EVOLVE-BLOCK-START: CoefficientDynamics"
+  evolve_block_end: "# EVOLVE-BLOCK-END: CoefficientDynamics"
+  output_dir: "experiments/01_evolve_coefficient_dynamics"
+
+# Logging
+logging:
+  level: "INFO"
+  log_file: "evolution_coefficient_dynamics.log"
+  save_code_history: true
+  save_fitness_history: true
